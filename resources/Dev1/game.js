@@ -48,6 +48,11 @@ Any value returned is ignored.
 [options : Object] = A JavaScript object with optional data properties; see API documentation for details.
 */
 
+let tileColor = PS.COLOR_RED
+let updateTimerID
+let lastX
+let lastY
+
 PS.init = function( system, options ) {
 	// Uncomment the following code line
 	// to verify operation:
@@ -64,7 +69,28 @@ PS.init = function( system, options ) {
 	// Uncomment the following code line and change
 	// the x and y parameters as needed.
 
-	// PS.gridSize( 8, 8 );
+	PS.gridSize(21,21)
+
+	PS.color(10, 20, PS.COLOR_GREEN)
+	PS.data(10, 20, PS.COLOR_GREEN)
+	PS.color(9, 20, PS.COLOR_YELLOW)
+	PS.data(9, 20, PS.COLOR_YELLOW)
+	PS.color(8, 20, PS.COLOR_ORANGE)
+	PS.data(8, 20, PS.COLOR_ORANGE)
+	PS.color(7, 20, PS.COLOR_RED)
+	PS.data(7, 20, PS.COLOR_RED)
+	PS.color(11, 20, PS.COLOR_BLUE)
+	PS.data(11, 20, PS.COLOR_BLUE)
+	PS.color(12, 20, 0x4B0082)
+	PS.data(12, 20, 0x4B0082)
+	PS.color(13, 20, 0x8F00FF)
+	PS.data(13, 20, 0x8F00FF)
+
+	for (let x=0; x<21; x++) {
+		PS.color(x, 19, PS.COLOR_BLACK)
+	}
+
+	PS.timerStart(6, update)
 
 	// This is also a good place to display
 	// your game title or a welcome message
@@ -72,7 +98,8 @@ PS.init = function( system, options ) {
 	// Uncomment the following code line and
 	// change the string parameter as needed.
 
-	// PS.statusText( "Game" );
+	PS.statusText("Gravity Coloring!");
+	PS.debug("Click a color on the bottom row to select your color.")
 
 	// Add any other initialization code you need here.
 };
@@ -87,8 +114,29 @@ This function doesn't have to do anything. Any value returned is ignored.
 [options : Object] = A JavaScript object with optional data properties; see API documentation for details.
 */
 
+let update = function() {
+	for (let x = 20; x >= 0; x--) {
+		for (let y = 17; y >= 0; y--) {
+			if (PS.data(x, y+1) === 0 && PS.data(x, y) !== 0) {
+				PS.color(x, y+1, PS.data(x, y))
+				PS.data(x, y+1, PS.data(x, y))
+
+				PS.color(x, y, PS.COLOR_WHITE)
+				PS.data(x, y, 0)
+			}
+		}
+	}
+}
+
 PS.touch = function( x, y, data, options ) {
-    PS.color(x, y, PS.COLOR_RED)
+	if (y === 20 && (x >= 7 && x <= 13)) {
+		tileColor = data
+	}
+
+	if (y <= 18) {
+		PS.color(x, y, tileColor)
+		PS.data(x, y, tileColor)
+	}
 };
 
 /*
@@ -120,11 +168,8 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.enter = function( x, y, data, options ) {
-	// Uncomment the following code line to inspect x/y parameters:
-
-	// PS.debug( "PS.enter() @ " + x + ", " + y + "\n" );
-
-	// Add code here for when the mouse cursor/touch enters a bead.
+	lastX = x
+	lastY = y
 };
 
 /*
@@ -171,11 +216,14 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.keyDown = function( key, shift, ctrl, options ) {
-	// Uncomment the following code line to inspect first three parameters:
-
-	// PS.debug( "PS.keyDown(): key=" + key + ", shift=" + shift + ", ctrl=" + ctrl + "\n" );
-
-	// Add code here for when a key is pressed.
+	if (key === 69 || key === 101) { // [Ee]
+		PS.color(lastX, lastY, PS.COLOR_WHITE)
+		PS.glyph(lastX, lastY, "")
+		PS.data(lastX, lastY, 0)
+	}
+	if (key === 71 || key === 103) {
+		PS.glyph(lastX, lastY, "*")
+	}
 };
 
 /*
