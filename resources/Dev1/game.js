@@ -48,10 +48,17 @@ Any value returned is ignored.
 [options : Object] = A JavaScript object with optional data properties; see API documentation for details.
 */
 
-let tileColor = PS.COLOR_RED
-let updateTimerID
+let tileColor = PS.COLOR_RED // Default
 let lastX
 let lastY
+let instructionIndex = 1
+let instructions = [
+	"Gravity Coloring!",
+	"Click to color!",
+	"Press E to erase!",
+	"Press S to place a star!",
+	"Stars prevent gravity in and above them!"
+]
 
 PS.init = function( system, options ) {
 	// Uncomment the following code line
@@ -90,7 +97,8 @@ PS.init = function( system, options ) {
 		PS.color(x, 19, PS.COLOR_BLACK)
 	}
 
-	PS.timerStart(6, update)
+	PS.timerStart(5, update)
+	PS.timerStart(210, instructionCycle)
 
 	// This is also a good place to display
 	// your game title or a welcome message
@@ -99,8 +107,6 @@ PS.init = function( system, options ) {
 	// change the string parameter as needed.
 
 	PS.statusText("Gravity Coloring!");
-	PS.debug("Click a color on the bottom row to select your color.")
-
 	// Add any other initialization code you need here.
 };
 
@@ -117,14 +123,22 @@ This function doesn't have to do anything. Any value returned is ignored.
 let update = function() {
 	for (let x = 20; x >= 0; x--) {
 		for (let y = 17; y >= 0; y--) {
-			if (PS.data(x, y+1) === 0 && PS.data(x, y) !== 0) {
-				PS.color(x, y+1, PS.data(x, y))
+			if (PS.data(x, y+1) === 0 && (PS.data(x, y) !== 0 && PS.data(x, y).glyph === false)) {
+				PS.color(x, y+1, PS.data(x, y).color)
 				PS.data(x, y+1, PS.data(x, y))
 
 				PS.color(x, y, PS.COLOR_WHITE)
 				PS.data(x, y, 0)
 			}
 		}
+	}
+}
+
+let instructionCycle = function() {
+	PS.statusText(instructions[instructionIndex])
+	instructionIndex++
+	if (instructionIndex > 4) {
+		instructionIndex = 0
 	}
 }
 
@@ -135,7 +149,8 @@ PS.touch = function( x, y, data, options ) {
 
 	if (y <= 18) {
 		PS.color(x, y, tileColor)
-		PS.data(x, y, tileColor)
+		const hasGlyph = data === 0 ? false : data.glyph
+		PS.data(x, y, {color: tileColor, glyph: hasGlyph})
 	}
 };
 
@@ -222,7 +237,9 @@ PS.keyDown = function( key, shift, ctrl, options ) {
 		PS.data(lastX, lastY, 0)
 	}
 	if (key === 71 || key === 103) {
+		const prevcolor = PS.data(lastX, lastY).color
 		PS.glyph(lastX, lastY, "*")
+		PS.data(lastX, lastY, {color: prevcolor, glyph: true})
 	}
 };
 
