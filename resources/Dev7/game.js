@@ -49,15 +49,21 @@ Any value returned is ignored.
 */
 
 let ship
+let shipEmpty
 let shipX = 0
 let shipY = 0
 
 PS.init = function( system, options ) {
     PS.imageLoad("images/spaceship.png", (data) => {
-        ship = data;
+        ship = PS.spriteImage(data)
     }, 4)
+    PS.imageLoad("images/spaceship_empty.png", (data) => {
+        shipEmpty = PS.spriteImage(data)
+    })
 
-    PS.gridSize(24,24)
+
+    PS.borderAlpha(PS.ALL, PS.ALL, 0)
+    PS.gridSize(32,32)
 };
 
 /*
@@ -72,9 +78,6 @@ This function doesn't have to do anything. Any value returned is ignored.
 
 PS.touch = function( x, y, data, options ) {
     PS.debug(ship.data)
-    PS.debug('poop')
-    PS.imageBlit(ship, x, y)
-
 };
 
 /*
@@ -153,11 +156,16 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.keyDown = function( key, shift, ctrl, options ) {
-	// Uncomment the following code line to inspect first three parameters:
-
-	// PS.debug( "PS.keyDown(): key=" + key + ", shift=" + shift + ", ctrl=" + ctrl + "\n" );
-
-	// Add code here for when a key is pressed.
+    if (key === PS.KEY_ARROW_DOWN) {
+        PS.imageBlit(shipEmpty, shipX, shipY)
+        shipY++
+        PS.imageBlit(ship, shipX, shipY)
+    }
+    if (key === PS.KEY_ARROW_UP) {
+        PS.imageBlit(shipEmpty, shipX, shipY)
+        shipY--
+        PS.imageBlit(ship, shipX, shipY)
+    }
 };
 
 /*
