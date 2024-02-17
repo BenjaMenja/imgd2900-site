@@ -49,21 +49,69 @@ Any value returned is ignored.
 */
 
 let ship
-let shipEmpty
-let shipX = 0
-let shipY = 0
+let asteroidSpriteData
+let asteroidSpeedSpriteData
+let asteroidBigSpriteData
+let shotCooldown = 0
+let pointsOnes = 0
+let pointsTens = 0
+let dead = false
+let win = false
+let canRestart = false
+let increasedSpawnsTimer
+
+let levelNum = 1
+
+let asteroids = []
+let lasers = []
+let pointreqs = [10, 20, 30, 40]
 
 PS.init = function( system, options ) {
-    PS.imageLoad("images/spaceship.png", (data) => {
-        ship = PS.spriteImage(data)
-    }, 4)
-    PS.imageLoad("images/spaceship_empty.png", (data) => {
-        shipEmpty = PS.spriteImage(data)
+    PS.gridSize(32,32)
+    PS.seed(PS.date().time)
+
+    PS.imageLoad("images/asteroid.png", (data) => {
+        asteroidSpriteData = data
+        new Asteroid(PS.spriteImage(data), 31, PS.random(28) - 1, 'r')
     })
 
+    PS.imageLoad("images/asteroid_speed.png", (data) => {
+        asteroidSpeedSpriteData = data
+    })
 
-    PS.borderAlpha(PS.ALL, PS.ALL, 0)
-    PS.gridSize(32,32)
+    PS.imageLoad("images/asteroid_big.png", (data) => {
+        asteroidBigSpriteData = data
+    })
+
+    PS.imageLoad("images/spaceship.png", (data) => {
+        ship = new Ship(PS.spriteImage(data), 0, 0, 6, 5)
+        PS.spriteCollide(ship.sprite, handleShipCollision)
+    })
+
+    PS.border(PS.ALL, PS.ALL, 0)
+    PS.bgColor(PS.ALL, PS.ALL, PS.COLOR_BLACK)
+    PS.color(PS.ALL, PS.ALL, PS.COLOR_BLACK)
+    PS.bgAlpha(PS.ALL, PS.ALL, 255)
+    PS.timerStart(1, updateTick)
+    PS.timerStart(10, updateSlow)
+    PS.timerStart(5, updateFast)
+
+    PS.statusText("Space Escape: Level " + levelNum)
+
+    PS.glyph(8, 31, 'P')
+    PS.glyph(9, 31, 'O')
+    PS.glyph(10, 31, 'I')
+    PS.glyph(11, 31, 'N')
+    PS.glyph(12, 31, 'T')
+    PS.glyph(13, 31, 'S')
+    PS.glyph(15, 31, pointsTens.toString())
+    PS.glyph(16, 31, pointsOnes.toString())
+    PS.glyph(17, 31, '/')
+    PS.glyph(18, 31, '1')
+    PS.glyph(19, 31, '0')
+
+    PS.glyphColor(PS.ALL, PS.ALL, PS.COLOR_WHITE)
+
 };
 
 /*
@@ -77,7 +125,7 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.touch = function( x, y, data, options ) {
-    PS.debug(ship.data)
+
 };
 
 /*
@@ -105,11 +153,7 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.enter = function( x, y, data, options ) {
-	// Uncomment the following code line to inspect x/y parameters:
 
-	// PS.debug( "PS.enter() @ " + x + ", " + y + "\n" );
-
-	// Add code here for when the mouse cursor/touch enters a bead.
 };
 
 /*
@@ -123,11 +167,7 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.exit = function( x, y, data, options ) {
-	// Uncomment the following code line to inspect x/y parameters:
 
-	// PS.debug( "PS.exit() @ " + x + ", " + y + "\n" );
-
-	// Add code here for when the mouse cursor/touch exits a bead.
 };
 
 /*
@@ -138,11 +178,7 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.exitGrid = function( options ) {
-	// Uncomment the following code line to verify operation:
 
-	// PS.debug( "PS.exitGrid() called\n" );
-
-	// Add code here for when the mouse cursor/touch moves off the grid.
 };
 
 /*
@@ -156,15 +192,26 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.keyDown = function( key, shift, ctrl, options ) {
-    if (key === PS.KEY_ARROW_DOWN) {
-        PS.imageBlit(shipEmpty, shipX, shipY)
-        shipY++
-        PS.imageBlit(ship, shipX, shipY)
+    if (!dead && !win) {
+        if (key === PS.KEY_ARROW_DOWN && ship.y < 27) {
+            ship.y++
+            ship.tip.y++
+            PS.spriteMove(ship.sprite, ship.x, ship.y)
+        }
+        if (key === PS.KEY_ARROW_UP && ship.y > 0) {
+            ship.y--
+            ship.tip.y--
+            PS.spriteMove(ship.sprite, ship.x, ship.y)
+        }
+
+        if (key === 83 || key === 115 && shotCooldown <= 0) {
+            new Laser(ship.tip.x+1, ship.tip.y)
+            shotCooldown = 45
+        }
     }
-    if (key === PS.KEY_ARROW_UP) {
-        PS.imageBlit(shipEmpty, shipX, shipY)
-        shipY--
-        PS.imageBlit(ship, shipX, shipY)
+
+    if (key === 82 || key === 114 && canRestart) {
+        restartGame()
     }
 };
 
@@ -179,31 +226,260 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.keyUp = function( key, shift, ctrl, options ) {
-	// Uncomment the following code line to inspect first three parameters:
 
-	// PS.debug( "PS.keyUp(): key=" + key + ", shift=" + shift + ", ctrl=" + ctrl + "\n" );
-
-	// Add code here for when a key is released.
 };
 
-/*
-PS.input ( sensors, options )
-Called when a supported input device event (other than those above) is detected.
-This function doesn't have to do anything. Any value returned is ignored.
-[sensors : Object] = A JavaScript object with properties indicating sensor status; see API documentation for details.
-[options : Object] = A JavaScript object with optional data properties; see API documentation for details.
-NOTE: Currently, only mouse wheel events are reported, and only when the mouse cursor is positioned directly over the grid.
-*/
+const Asteroid = function(sprite, x, y, type, health = 1) {
+    this.sprite = sprite
+    this.x = x
+    this.y = y
+    this.width = 4
+    this.height = 4
+    this.type = type
+    this.health = health
+    asteroids.push(this)
+}
 
-PS.input = function( sensors, options ) {
-	// Uncomment the following code lines to inspect first parameter:
+const Laser = function(x, y) {
+    PS.audioPlay("fx_shoot3", {volume: 0.25})
+    const sprite = PS.spriteSolid(2, 1)
+    PS.spriteSolidColor(sprite, PS.COLOR_RED)
+    this.sprite = sprite
+    this.x = x
+    this.y = y
+    this.width = 2
+    this.height = 1
+    PS.spriteCollide(sprite, breakAsteroid)
+    lasers.push(this)
+}
 
-//	 var device = sensors.wheel; // check for scroll wheel
-//
-//	 if ( device ) {
-//	   PS.debug( "PS.input(): " + device + "\n" );
-//	 }
+const Ship = function(sprite, x, y, width, height) {
+    this.sprite = sprite
+    this.x = x
+    this.y = y
+    this.width = 2
+    this.height = 1
+    this.tip = {x: x + 5, y: y + 2}
+    PS.spriteMove(sprite, x, y)
+}
 
-	// Add code here for when an input event is detected.
-};
+const updateSlow = () => {
+    moveAsteroids()
+}
 
+const updateFast = () => {
+    moveLasers()
+}
+
+const updateTick = () => {
+    if (shotCooldown > 0) {
+        shotCooldown--
+    }
+    if (win) {
+        asteroids.forEach((asteroid) => {
+            PS.spriteDelete(asteroid.sprite)
+        })
+        asteroids.length = 0
+    }
+}
+
+const spawnAsteroid = () => {
+    const x = PS.random(10) + 32
+    const y = PS.random(28) - 1
+    const rand = PS.random(10)
+    switch (levelNum) {
+        case 1:
+            new Asteroid(PS.spriteImage(asteroidSpriteData), x, y, 'r')
+            break
+        case 2:
+            if (rand > 5) {
+                new Asteroid(PS.spriteImage(asteroidSpriteData), x, y, 'r')
+            }
+            else {
+                new Asteroid(PS.spriteImage(asteroidSpeedSpriteData), x, y, 's')
+            }
+            break
+        case 3:
+            if (rand > 5) {
+                new Asteroid(PS.spriteImage(asteroidSpriteData), x, y, 'r')
+            }
+            else if (rand >= 1 && rand < 4) {
+                new Asteroid(PS.spriteImage(asteroidSpeedSpriteData), x, y, 's')
+            }
+            else {
+                new Asteroid(PS.spriteImage(asteroidBigSpriteData), x, y, 'b', 3)
+            }
+            break
+        case 4:
+            if (rand === 1 || rand === 2) {
+                new Asteroid(PS.spriteImage(asteroidSpriteData), x, y, 'r')
+            }
+            else if (rand >= 3 && rand <= 8) {
+                new Asteroid(PS.spriteImage(asteroidSpeedSpriteData), x, y, 's')
+            }
+            else {
+                new Asteroid(PS.spriteImage(asteroidBigSpriteData), x, y, 'b', 3)
+            }
+            break
+        default:
+            break
+    }
+}
+
+const incrementPoints = (num = 1) => {
+    PS.audioPlay("fx_bang")
+    pointsOnes += num
+    if (pointsOnes >= 10) {
+        pointsTens++
+        pointsOnes -= 10
+    }
+    PS.glyph(15, 31, pointsTens.toString())
+    PS.glyph(16, 31, pointsOnes.toString())
+    if (pointsTens * 10 + pointsOnes >= pointreqs[levelNum - 1]) {
+        newRound()
+    }
+}
+
+const newRound = () => {
+    PS.audioPlay("fx_powerup2")
+    levelNum++
+    pointsTens = 0
+    pointsOnes = 0
+    PS.glyph(15, 31, pointsTens.toString())
+    PS.glyph(16, 31, pointsOnes.toString())
+    PS.glyph(18, 31, levelNum.toString())
+    PS.statusText("Space Escape: Level " + levelNum)
+    if (levelNum === 4) {
+        increasedSpawnsTimer = PS.timerStart(150, () => {
+            spawnAsteroid()
+        })
+    }
+    if (levelNum === 5) {
+        winScreen()
+    }
+}
+
+const shipDestroy = () => {
+    PS.spriteShow(ship.sprite, false)
+    dead = true
+    PS.statusText("You were destroyed...")
+    PS.audioPlay("fx_blast1")
+    setTimeout(() => {
+        canRestart = true
+        PS.statusText("Press 'r' to restart.")
+    }, 3000)
+}
+
+const winScreen = () => {
+    win = true
+    PS.statusText("You win!")
+}
+
+const restartGame = () => {
+    if (levelNum === 4) {
+        PS.timerStop(increasedSpawnsTimer)
+    }
+
+    levelNum = 1
+    pointsOnes = 0
+    pointsTens = 0
+    PS.glyph(15, 31, pointsTens.toString())
+    PS.glyph(16, 31, pointsOnes.toString())
+    PS.glyph(18, 31, levelNum.toString())
+
+    ship.x = 0
+    ship.y = 0
+    ship.tip = {x: 5, y: 2}
+    PS.spriteMove(ship.sprite, ship.x, ship.y)
+    PS.spriteShow(ship.sprite, true)
+    dead = false
+    win = false
+
+    PS.statusText("Space Escape: Level " + levelNum)
+
+    lasers.forEach((laser) => {
+        PS.spriteDelete(laser.sprite)
+    })
+    lasers.length = 0
+
+    asteroids.forEach((asteroid) => {
+        PS.spriteDelete(asteroid.sprite)
+    })
+    asteroids.length = 0
+    spawnAsteroid()
+}
+
+const moveAsteroids = () => {
+    if (asteroids.length === 0) {
+        spawnAsteroid()
+        if (PS.random(10) > 5) { // 50% chance to spawn new asteroid
+            spawnAsteroid()
+        }
+    }
+    asteroids.forEach((a) => {
+        PS.spriteMove(a.sprite, a.x, a.y)
+        a.x = a.x - 1
+        if (a.type === 's' && PS.random(10) <= 4) { // 40% chance for speed asteroid to move another step
+            PS.spriteMove(a.sprite, a.x, a.y)
+            a.x = a.x - 1
+        }
+        if (a.x + a.width < 0) {
+            const newX = PS.random(10) + 32
+            const newY = PS.random(28) - 1
+            PS.spriteMove(a.sprite, newX, newY)
+            a.x = newX
+            a.y = newY
+            if (PS.random(10) > 5) { // 50% chance to spawn new asteroid
+                spawnAsteroid()
+            }
+        }
+        if (!PS.spriteShow(a.sprite)) {
+            const index = asteroids.indexOf(a)
+            asteroids.splice(index, 1)
+            PS.spriteDelete(a.sprite)
+        }
+    })
+}
+
+const moveLasers = () => {
+    lasers.forEach((laser) => {
+        PS.spriteMove(laser.sprite, laser.x, laser.y)
+        laser.x = laser.x + 1
+        if (laser.x > 32 || !PS.spriteShow(laser.sprite)) {
+            const index = lasers.indexOf(laser)
+            lasers.splice(index, 1)
+            PS.spriteDelete(laser.sprite)
+        }
+    })
+}
+
+const handleShipCollision = (s1, p1, s2, p2, type) => {
+    asteroids.every((asteroid) => {
+        if (type === PS.SPRITE_OVERLAP && asteroid.sprite === s2) {
+            shipDestroy()
+            return false
+        }
+    })
+}
+
+const breakAsteroid = (s1, p1, s2, p2, type) => {
+    asteroids.every((asteroid) => {
+        if (asteroid.type !== 'b' && type === PS.SPRITE_OVERLAP && asteroid.sprite === s2) {
+            PS.spriteShow(s1, false)
+            PS.spriteShow(s2, false)
+            incrementPoints()
+            return false
+        }
+
+        if (asteroid.type === 'b' && type === PS.SPRITE_OVERLAP && asteroid.sprite === s2) {
+            asteroid.health--
+            PS.spriteShow(s2, false)
+            if (asteroid.health === 0) {
+                PS.spriteShow(s1, false)
+                PS.spriteShow(s2, false)
+                incrementPoints(2)
+                return false
+            }
+        }
+    })
+}
