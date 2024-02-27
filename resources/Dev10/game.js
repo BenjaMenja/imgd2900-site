@@ -51,8 +51,12 @@ Any value returned is ignored.
 const kingTextColor = 0xff5656
 const playerTextColor = 0x262cff
 
+let gameSequence = 0
+
 let introSprite
 let introDialogueNumber = 0
+
+let chaosTrialTutorialNumber = 0
 
 PS.init = function( system, options ) {
     PS.gridSize(16, 16)
@@ -147,7 +151,41 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.keyDown = function( key, shift, ctrl, options ) {
+    if (key === 84 || key === 116) { // [Tt]
+        switch (gameSequence) {
+            case 0:
+                intro()
+                break
+            case 1:
+                chaosTrialsTutorial()
+                break
+            case 2:
+                PS.gridSize(32, 32)
+                PS.spriteDelete(introSprite)
+                PS.glyph(8, 31, 'R')
+                PS.glyph(9, 31, 'O')
+                PS.glyph(10, 31, 'U')
+                PS.glyph(11, 31, 'N')
+                PS.glyph(12, 31, 'D')
+                PS.glyph(13, 31, ':')
+                PS.glyph(15, 31, '0')
+                PS.glyph(16, 31, '/')
+                PS.glyph(17, 31, '1')
+                PS.glyph(18, 31, '0')
+                PS.glyph(8, 30, 'F')
+                PS.glyph(9, 30, 'A')
+                PS.glyph(10, 30, 'I')
+                PS.glyph(11, 30, 'L')
+                PS.glyph(12, 30, 'S')
+                PS.glyph(13, 30, ':')
+                PS.glyph(15, 30, '0')
+                PS.glyph(16, 30, '/')
+                PS.glyph(17, 30, '2')
+            default:
+                break
+        }
 
+    }
 };
 
 /*
@@ -183,7 +221,71 @@ const intro = () => {
             PS.statusColor(playerTextColor)
             break
         case 4:
-
+            PS.statusText("Have you been living under a rock???")
+            PS.statusColor(kingTextColor)
+            break
+        case 5:
+            PS.statusText("The kingdom has descended into chaos...")
+            break
+        case 6:
+            PS.statusText("Your capabilities far exceed everyone else's...")
+            break
+        case 7:
+            PS.statusText("You can restore order to the kingdom!")
+            break
+        case 8:
+            PS.statusText("Do I have to...?")
+            PS.statusColor(playerTextColor)
+            break
+        case 9:
+            PS.statusText("Yes! You are the only one!")
+            PS.statusColor(kingTextColor)
+            break
+        case 10:
+            PS.statusText("Ugh... fine! What do I have to do?")
+            PS.statusColor(playerTextColor)
+            break
+        case 11:
+            PS.statusText("To prove yourself worthy of the Staff of Order, you must pass the Chaos Trials.")
+            PS.statusColor(kingTextColor)
+            break
+        case 12:
+            PS.statusText("Wait, so to restore order from chaos, I have to do something chaotic?")
+            PS.statusColor(playerTextColor)
+            break
+        case 13:
+            PS.statusText("Don't question it. I'm just doing what I was told.")
+            PS.statusColor(kingTextColor)
+            break
+        case 14:
+            PS.statusText("Ok... so what are these chaos trials you speak of?")
+            PS.statusColor(playerTextColor)
+            gameSequence = 1
+            break
+        default:
+            break
     }
+    introDialogueNumber++
 }
 
+const chaosTrialsTutorial = () => {
+    switch (chaosTrialTutorialNumber) {
+        case 0:
+            PS.statusText("The chaos trials consists of 10 quicktime trials.")
+            PS.statusColor(PS.COLOR_BLACK)
+            break
+        case 1:
+            PS.statusText("Each trial is a random quicktime minigame.")
+            break
+        case 2:
+            PS.statusText("Failing 2 of the 10 trials means you are not worthy!")
+            break
+        case 3:
+            PS.statusText("Instructions for each game will be quick, good luck!")
+            gameSequence = 2
+            break
+        default:
+            break
+    }
+    chaosTrialTutorialNumber++
+}
