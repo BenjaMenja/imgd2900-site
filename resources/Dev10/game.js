@@ -50,15 +50,27 @@ Any value returned is ignored.
 
 const kingTextColor = 0xff5656
 const playerTextColor = 0x262cff
+const backgroundGrey = 0x464646
 
-let gameSequence = 0
+let gameSequence = 2
+let round = 1
+let fails = 0
 
 let introSprite
 let introDialogueNumber = 0
 
 let chaosTrialTutorialNumber = 0
 
+let lastUsedTrial = -1
+let trialsInProgress = false
+
+let selectColorTrialColor
+let dodgeColorTrialColor
+let dodgeColorYPos = 29
+let crownTrialPosition
+
 PS.init = function( system, options ) {
+    PS.seed(PS.date().time)
     PS.gridSize(16, 16)
     PS.border(PS.ALL, PS.ALL, 0)
     PS.borderAlpha(PS.ALL, PS.ALL, 0)
@@ -84,7 +96,44 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.touch = function( x, y, data, options ) {
+    if (gameSequence === 4) {
+        if (PS.color(x, y) === selectColorTrialColor) {
+            trialSuccess()
+        }
+        else if (PS.color(x, y) !== backgroundGrey) {
+            trialFailure()
+        }
+    }
 
+    if (gameSequence === 6) {
+        if (PS.color(x, y) !== selectColorTrialColor && PS.color(x, y) !== backgroundGrey) {
+            trialSuccess()
+        }
+        else if (PS.color(x, y) !== backgroundGrey) {
+            trialFailure()
+        }
+    }
+
+    if (gameSequence === 7) {
+        if (x === 1 && y === 16 && crownTrialPosition === 0) {
+            trialSuccess()
+        }
+        else if (x === 8 && y === 16 && crownTrialPosition === 1) {
+            trialSuccess()
+        }
+        else if (x === 15 && y === 16 && crownTrialPosition === 2) {
+            trialSuccess()
+        }
+        else if (x === 22 && y === 16 && crownTrialPosition === 3) {
+            trialSuccess()
+        }
+        else if (x === 29 && y === 16 && crownTrialPosition === 4) {
+            trialSuccess()
+        }
+        else if (PS.glyph(x, y) !== 0) {
+            trialFailure()
+        }
+    }
 };
 
 /*
@@ -151,7 +200,7 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.keyDown = function( key, shift, ctrl, options ) {
-    if (key === 84 || key === 116) { // [Tt]
+    if (key === 84 || key === 116 && !trialsInProgress) { // [Tt]
         switch (gameSequence) {
             case 0:
                 intro()
@@ -160,15 +209,16 @@ PS.keyDown = function( key, shift, ctrl, options ) {
                 chaosTrialsTutorial()
                 break
             case 2:
-                PS.gridSize(32, 32)
-                PS.spriteDelete(introSprite)
+                PS.gridSize(31, 32)
+                PS.border(PS.ALL, PS.ALL, 0)
+                PS.borderAlpha(PS.ALL, PS.ALL, 0)
                 PS.glyph(8, 31, 'R')
                 PS.glyph(9, 31, 'O')
                 PS.glyph(10, 31, 'U')
                 PS.glyph(11, 31, 'N')
                 PS.glyph(12, 31, 'D')
                 PS.glyph(13, 31, ':')
-                PS.glyph(15, 31, '0')
+                PS.glyph(15, 31, '1')
                 PS.glyph(16, 31, '/')
                 PS.glyph(17, 31, '1')
                 PS.glyph(18, 31, '0')
@@ -181,10 +231,71 @@ PS.keyDown = function( key, shift, ctrl, options ) {
                 PS.glyph(15, 30, '0')
                 PS.glyph(16, 30, '/')
                 PS.glyph(17, 30, '2')
+                PS.glyphColor(PS.ALL, 30, PS.COLOR_WHITE)
+                PS.glyphColor(PS.ALL, 31, PS.COLOR_WHITE)
+                PS.color(PS.ALL, PS.ALL, backgroundGrey)
+                PS.color(PS.ALL, 30, PS.COLOR_BLACK)
+                PS.color(PS.ALL, 31, PS.COLOR_BLACK)
+                gameSequence = 3
+                break
+            case 3:
+                trialsInProgress = true
+                generateTrial()
+                break
             default:
                 break
         }
+    }
 
+    if (gameSequence === 5) {
+        // Spacebar in the dodge gamemode to jump
+        if (key === 32 && dodgeColorYPos === 29) {
+            let timer = 0
+            const timerID = PS.timerStart(1, () => {
+                timer++
+                if (timer === 1) {
+                    PS.color(2, 28, playerTextColor)
+                    PS.color(2, 29, backgroundGrey)
+                    dodgeColorYPos--
+                }
+                if (timer === 6) {
+                    PS.color(2, 27, playerTextColor)
+                    PS.color(2, 28, backgroundGrey)
+                    dodgeColorYPos--
+                }
+                if (timer === 10) {
+                    PS.color(2, 26, playerTextColor)
+                    PS.color(2, 27, backgroundGrey)
+                    dodgeColorYPos--
+                }
+                if (timer === 15) {
+                    PS.color(2, 25, playerTextColor)
+                    PS.color(2, 26, backgroundGrey)
+                    dodgeColorYPos--
+                }
+                if (timer === 19) {
+                    PS.color(2, 26, playerTextColor)
+                    PS.color(2, 25, backgroundGrey)
+                    dodgeColorYPos++
+                }
+                if (timer === 23) {
+                    PS.color(2, 27, playerTextColor)
+                    PS.color(2, 26, backgroundGrey)
+                    dodgeColorYPos++
+                }
+                if (timer === 27) {
+                    PS.color(2, 28, playerTextColor)
+                    PS.color(2, 27, backgroundGrey)
+                    dodgeColorYPos++
+                }
+                if (timer === 30) {
+                    PS.color(2, 29, playerTextColor)
+                    PS.color(2, 28, backgroundGrey)
+                    dodgeColorYPos++
+                    PS.timerStop(timerID)
+                }
+            })
+        }
     }
 };
 
@@ -201,6 +312,45 @@ This function doesn't have to do anything. Any value returned is ignored.
 PS.keyUp = function( key, shift, ctrl, options ) {
 
 };
+
+const updateRound = (roundNum) => {
+    PS.glyph(15, 31, roundNum.toString())
+}
+
+const updateFails = (failNum) => {
+    PS.glyph(15, 30, failNum.toString())
+}
+
+const wipeScreen = () => {
+    for (let x=0; x<=30; x++) {
+        for (let y=0; y<=29; y++) {
+            PS.color(x, y, backgroundGrey)
+            PS.glyph(x, y, 0)
+        }
+    }
+}
+
+const trialSuccess = () => {
+    PS.statusText("Success!")
+    setTimeout(() => {
+        gameSequence = 3
+        round++
+        updateRound(round)
+        generateTrial()
+    }, 3000)
+}
+
+const trialFailure = () => {
+    fails++
+    updateFails(fails)
+    PS.statusText("Failure!")
+    setTimeout(() => {
+        gameSequence = 3
+        round++
+        updateRound(round)
+        generateTrial()
+    }, 3000)
+}
 
 const intro = () => {
     switch (introDialogueNumber) {
@@ -246,19 +396,28 @@ const intro = () => {
             PS.statusColor(playerTextColor)
             break
         case 11:
-            PS.statusText("To prove yourself worthy of the Staff of Order, you must pass the Chaos Trials.")
+            PS.statusText("To prove yourself worthy of the Staff of Order...")
             PS.statusColor(kingTextColor)
             break
         case 12:
-            PS.statusText("Wait, so to restore order from chaos, I have to do something chaotic?")
-            PS.statusColor(playerTextColor)
+            PS.statusText("You must complete the chaos trials.")
             break
         case 13:
-            PS.statusText("Don't question it. I'm just doing what I was told.")
-            PS.statusColor(kingTextColor)
+            PS.statusText("Wait, so to restore order from chaos...")
+            PS.statusColor(playerTextColor)
             break
         case 14:
-            PS.statusText("Ok... so what are these chaos trials you speak of?")
+            PS.statusText("I have to do something chaotic?")
+            break
+        case 15:
+            PS.statusText("Don't question it...")
+            PS.statusColor(kingTextColor)
+            break
+        case 16:
+            PS.statusText("I'm just doing what I was told.")
+            break
+        case 17:
+            PS.statusText("Ok... so what are these chaos trials exactly?")
             PS.statusColor(playerTextColor)
             gameSequence = 1
             break
@@ -271,17 +430,23 @@ const intro = () => {
 const chaosTrialsTutorial = () => {
     switch (chaosTrialTutorialNumber) {
         case 0:
-            PS.statusText("The chaos trials consists of 10 quicktime trials.")
+            PS.statusText("The chaos trials consists of 10 trials.")
             PS.statusColor(PS.COLOR_BLACK)
             break
         case 1:
             PS.statusText("Each trial is a random quicktime minigame.")
             break
         case 2:
-            PS.statusText("Failing 2 of the 10 trials means you are not worthy!")
+            PS.statusText("Don't fail more than 1 trial!")
             break
         case 3:
-            PS.statusText("Instructions for each game will be quick, good luck!")
+            PS.statusText("It means you are not worthy!")
+            break
+        case 4:
+            PS.statusText("Instructions for each game will be quick!")
+            break
+        case 5:
+            PS.statusText("Good luck!")
             gameSequence = 2
             break
         default:
@@ -289,3 +454,148 @@ const chaosTrialsTutorial = () => {
     }
     chaosTrialTutorialNumber++
 }
+
+const generateTrial = () => {
+    let trial = PS.random(trials.length)
+    while (trial === lastUsedTrial) {
+        trial = PS.random(trials.length)
+    }
+    lastUsedTrial = trial
+    wipeScreen()
+    trials[trial - 1]()
+    PS.gridRefresh()
+    console.log(trial - 1)
+}
+
+const trial_selectColor = () => {
+    const colors = [PS.COLOR_RED, PS.COLOR_GREEN, PS.COLOR_BLUE, PS.COLOR_VIOLET, PS.COLOR_ORANGE]
+    const colornames = ["Red", "Green", "Blue", "Purple", "Orange"]
+    const index = PS.random(colors.length) - 1
+    selectColorTrialColor = colors[index]
+    PS.statusText("Select " + colornames[index] + "!")
+    PS.color(1, 16, colors[0])
+    PS.color(8, 16, colors[1])
+    PS.color(15, 16, colors[2])
+    PS.color(22, 16, colors[3])
+    PS.color(29, 16, colors[4])
+    gameSequence = 4
+}
+
+const trial_dodgeColor = () => {
+    const colors = [PS.COLOR_RED, PS.COLOR_GREEN, PS.COLOR_YELLOW, PS.COLOR_VIOLET, PS.COLOR_ORANGE]
+    const colornames = ["Red", "Green", "Yellow", "Purple", "Orange"]
+    const index = PS.random(colors.length) - 1
+    dodgeColorTrialColor = colors[index]
+    const dummyDodgeColor = (index !== 4 ? colors[index + 1] : colors[0])
+    PS.statusText("Dodge the " + colornames[index] + " tiles!")
+    PS.color(2, 29, playerTextColor)
+    gameSequence = 5
+    let timer = 0
+    const timerID = PS.timerStart(3, () => {
+        timer++
+        for (let x=1; x <= 30; x++) {
+            if (PS.color(x, 27) === dodgeColorTrialColor) {
+                if (PS.color(x-1, 27) === playerTextColor) {
+                    PS.timerStop(timerID)
+                    trialFailure()
+                }
+                PS.color(x-1, 27, dodgeColorTrialColor)
+                PS.color(x, 27, backgroundGrey)
+            }
+            if (PS.color(x, 29) === dodgeColorTrialColor) {
+                if (PS.color(x-1, 29) === playerTextColor) {
+                    PS.timerStop(timerID)
+                    trialFailure()
+                }
+                PS.color(x-1, 29, dodgeColorTrialColor)
+                PS.color(x, 29, backgroundGrey)
+            }
+            if (PS.color(x, 27) === dummyDodgeColor) {
+                if (PS.color(x-1, 27) !== playerTextColor) {
+                    PS.color(x-1, 27, dummyDodgeColor)
+                }
+                PS.color(x, 27, backgroundGrey)
+            }
+            if (PS.color(x, 29) === dummyDodgeColor) {
+                if (PS.color(x-1, 29) !== playerTextColor) {
+                    PS.color(x-1, 29, dummyDodgeColor)
+                }
+                PS.color(x, 29, backgroundGrey)
+            }
+        }
+        if (timer % 20 === 0) {
+            const rand = PS.random(4)
+            switch (rand) {
+                case 1:
+                    PS.color(30, 29, dodgeColorTrialColor)
+                    break
+                case 2:
+                    PS.color(30, 29, dummyDodgeColor)
+                    break
+                case 3:
+                    PS.color(30, 29, dodgeColorTrialColor)
+                    PS.color(30, 27, dummyDodgeColor)
+                    break
+                case 4:
+                    PS.color(30, 29, dummyDodgeColor)
+                    PS.color(30, 27, dodgeColorTrialColor)
+                    break
+                default:
+                    break
+            }
+        }
+        if (timer === 200) {
+            PS.timerStop(timerID)
+            trialSuccess()
+        }
+    })
+}
+
+const trial_DontSelectColor = () => {
+    const colors = [PS.COLOR_RED, PS.COLOR_GREEN, PS.COLOR_BLUE, PS.COLOR_VIOLET, PS.COLOR_ORANGE]
+    const colornames = ["Red", "Green", "Blue", "Purple", "Orange"]
+    const index = PS.random(colors.length) - 1
+    selectColorTrialColor = colors[index]
+    PS.statusText("Don't select " + colornames[index] + "!")
+    PS.color(1, 16, colors[0])
+    PS.color(8, 16, colors[1])
+    PS.color(15, 16, colors[2])
+    PS.color(22, 16, colors[3])
+    PS.color(29, 16, colors[4])
+    gameSequence = 6
+}
+
+const trial_ClickTheCrown = () => {
+    const emojis = [0x1F451, 0x1F31F, 0x2B50, 0x1F505, 0x1F7E1] // Crown, Glowing Star, Star, Low brightness, yellow circle
+    for (let i = emojis.length - 1; i > 0; i--) {
+
+        // Generate random number
+        let j = Math.floor(Math.random() * (i + 1));
+
+        let temp = emojis[i];
+        emojis[i] = emojis[j];
+        emojis[j] = temp;
+    }
+    for (let i=0; i<emojis.length; i++) {
+        if (emojis[i] === 0x1F451) {
+            crownTrialPosition = i
+            break
+        }
+    }
+
+    PS.statusText("Click the crown!")
+    PS.color(1, 16, PS.COLOR_BLACK)
+    PS.color(8, 16, PS.COLOR_BLACK)
+    PS.color(15, 16, PS.COLOR_BLACK)
+    PS.color(22, 16, PS.COLOR_BLACK)
+    PS.color(29, 16, PS.COLOR_BLACK)
+    PS.glyph(1, 16, emojis[0])
+    PS.glyph(8, 16, emojis[1])
+    PS.glyph(15, 16, emojis[2])
+    PS.glyph(22, 16, emojis[3])
+    PS.glyph(29, 16, emojis[4])
+    gameSequence = 7
+}
+
+// Trials
+const trials = [trial_selectColor, trial_dodgeColor, trial_DontSelectColor, trial_ClickTheCrown]
