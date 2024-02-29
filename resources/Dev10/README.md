@@ -12,3 +12,7 @@
 - 9 | Press character from a-z on keyboard (use charCodeAt())
 - 10 | Move cursor around a lot
 - 11 | Cook the chicken! (click fire emoji on bottom and click on chicken)
+- 12 | Dodge falling blocks
+- 13 | Stop on Color
+- 14 | End screen (Win)
+- 15 | End screen (Loss)
