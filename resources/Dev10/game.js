@@ -184,22 +184,22 @@ PS.enter = function( x, y, data, options ) {
 
     if (gameSequence === 10 && timerInProgress) {
         moveCursorSteps++
-        if (moveCursorSteps === 50) {
+        if (moveCursorSteps === 40) {
             PS.color(15, 18, PS.COLOR_RED)
         }
-        if (moveCursorSteps === 100) {
+        if (moveCursorSteps === 80) {
             PS.color(15, 17, PS.COLOR_RED)
         }
-        if (moveCursorSteps === 150) {
+        if (moveCursorSteps === 120) {
             PS.color(15, 16, PS.COLOR_RED)
         }
-        if (moveCursorSteps === 200) {
+        if (moveCursorSteps === 160) {
             PS.color(15, 15, PS.COLOR_RED)
         }
-        if (moveCursorSteps === 250) {
+        if (moveCursorSteps === 200) {
             PS.color(15, 14, PS.COLOR_RED)
         }
-        if (moveCursorSteps === 300) {
+        if (moveCursorSteps === 240) {
             PS.color(15, 13, PS.COLOR_RED)
             timerInProgress = false
             trialSuccess()
@@ -404,6 +404,7 @@ const wipeScreen = () => {
 const trialSuccess = () => {
     PS.statusText("Success!")
     gameSequence = 3
+    moveCursorSteps = 0
     for (let x=15; x<=19; x++) {
         PS.color(x, 1, backgroundGrey)
     }
@@ -419,6 +420,7 @@ const trialFailure = () => {
     failFlag = false
     updateFails(fails)
     gameSequence = 3
+    moveCursorSteps = 0
     for (let x=15; x<=19; x++) {
         PS.color(x, 1, backgroundGrey)
     }
@@ -786,5 +788,21 @@ const trial_MoveCursorALot = () => {
     timerDisplay()
 }
 
+const trial_CookChicken = () => {
+    PS.statusText("Cook the Chicken!")
+    gameSequence = 11
+
+    PS.color(15, 29, PS.COLOR_BLACK)
+    PS.glyph(15, 29, 0x1F414)
+    PS.color(8, 8, PS.COLOR_BLACK)
+    PS.color(8, 23, PS.COLOR_BLACK)
+    PS.color(23, 8, PS.COLOR_BLACK)
+    PS.color(23, 23, PS.COLOR_BLACK)
+    PS.glyph(8, 8, 0x1F525)
+    PS.glyph(8, 23, 0x1F374)
+    PS.glyph(23, 8, 0x1F357)
+    PS.glyph(23, 23, 0x1F4A3)
+}
+
 // Trials
-const trials = [trial_selectColor, trial_dodgeColor, trial_DontSelectColor, trial_ClickTheCrown, trial_DontMoveCursor, trial_PressKey, trial_MoveCursorALot]
+const trials = [trial_selectColor, trial_dodgeColor, trial_DontSelectColor, trial_ClickTheCrown, trial_DontMoveCursor, trial_PressKey, trial_MoveCursorALot, trial_CookChicken]
