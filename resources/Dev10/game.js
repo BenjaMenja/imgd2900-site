@@ -51,10 +51,14 @@ Any value returned is ignored.
 const kingTextColor = 0xff5656
 const playerTextColor = 0x262cff
 const backgroundGrey = 0x464646
+const timerGreen = 0x85FF62
+
+let timerInProgress = false
 
 let gameSequence = 2
 let round = 1
 let fails = 0
+let failFlag = false
 
 let introSprite
 let introDialogueNumber = 0
@@ -68,6 +72,9 @@ let selectColorTrialColor
 let dodgeColorTrialColor
 let dodgeColorYPos = 29
 let crownTrialPosition
+let KeyTrialKey
+
+let moveCursorSteps = 0
 
 PS.init = function( system, options ) {
     PS.seed(PS.date().time)
@@ -98,39 +105,49 @@ This function doesn't have to do anything. Any value returned is ignored.
 PS.touch = function( x, y, data, options ) {
     if (gameSequence === 4) {
         if (PS.color(x, y) === selectColorTrialColor) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (PS.color(x, y) !== backgroundGrey) {
+            timerInProgress = false
             trialFailure()
         }
     }
 
     if (gameSequence === 6) {
         if (PS.color(x, y) !== selectColorTrialColor && PS.color(x, y) !== backgroundGrey) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (PS.color(x, y) !== backgroundGrey) {
+            timerInProgress = false
             trialFailure()
         }
     }
 
     if (gameSequence === 7) {
         if (x === 1 && y === 16 && crownTrialPosition === 0) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (x === 8 && y === 16 && crownTrialPosition === 1) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (x === 15 && y === 16 && crownTrialPosition === 2) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (x === 22 && y === 16 && crownTrialPosition === 3) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (x === 29 && y === 16 && crownTrialPosition === 4) {
+            timerInProgress = false
             trialSuccess()
         }
         else if (PS.glyph(x, y) !== 0) {
+            timerInProgress = false
             trialFailure()
         }
     }
@@ -161,7 +178,33 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.enter = function( x, y, data, options ) {
+    if (gameSequence === 8) {
+        failFlag = true
+    }
 
+    if (gameSequence === 10 && timerInProgress) {
+        moveCursorSteps++
+        if (moveCursorSteps === 50) {
+            PS.color(15, 18, PS.COLOR_RED)
+        }
+        if (moveCursorSteps === 100) {
+            PS.color(15, 17, PS.COLOR_RED)
+        }
+        if (moveCursorSteps === 150) {
+            PS.color(15, 16, PS.COLOR_RED)
+        }
+        if (moveCursorSteps === 200) {
+            PS.color(15, 15, PS.COLOR_RED)
+        }
+        if (moveCursorSteps === 250) {
+            PS.color(15, 14, PS.COLOR_RED)
+        }
+        if (moveCursorSteps === 300) {
+            PS.color(15, 13, PS.COLOR_RED)
+            timerInProgress = false
+            trialSuccess()
+        }
+    }
 };
 
 /*
@@ -186,7 +229,9 @@ This function doesn't have to do anything. Any value returned is ignored.
 */
 
 PS.exitGrid = function( options ) {
-
+    if (gameSequence === 8) {
+        failFlag = true
+    }
 };
 
 /*
@@ -231,11 +276,26 @@ PS.keyDown = function( key, shift, ctrl, options ) {
                 PS.glyph(15, 30, '0')
                 PS.glyph(16, 30, '/')
                 PS.glyph(17, 30, '2')
-                PS.glyphColor(PS.ALL, 30, PS.COLOR_WHITE)
-                PS.glyphColor(PS.ALL, 31, PS.COLOR_WHITE)
+                PS.glyph(8, 1, 'T')
+                PS.glyph(9, 1, 'I')
+                PS.glyph(10, 1, 'M')
+                PS.glyph(11, 1, 'E')
+                PS.glyph(12, 1, 'R')
+                PS.glyph(13, 1, ':')
                 PS.color(PS.ALL, PS.ALL, backgroundGrey)
+                PS.color(PS.ALL, 0, PS.COLOR_BLACK)
+                PS.color(PS.ALL, 1, PS.COLOR_BLACK)
+                PS.color(PS.ALL, 2, PS.COLOR_BLACK)
                 PS.color(PS.ALL, 30, PS.COLOR_BLACK)
                 PS.color(PS.ALL, 31, PS.COLOR_BLACK)
+                for (let x=15; x<=19; x++) {
+                    PS.color(x, 1, backgroundGrey)
+                }
+                PS.glyphColor(PS.ALL, 0, PS.COLOR_WHITE)
+                PS.glyphColor(PS.ALL, 1, PS.COLOR_WHITE)
+                PS.glyphColor(PS.ALL, 2, PS.COLOR_WHITE)
+                PS.glyphColor(PS.ALL, 30, PS.COLOR_WHITE)
+                PS.glyphColor(PS.ALL, 31, PS.COLOR_WHITE)
                 gameSequence = 3
                 break
             case 3:
@@ -297,6 +357,17 @@ PS.keyDown = function( key, shift, ctrl, options ) {
             })
         }
     }
+
+    if (gameSequence === 9) {
+        if (key === KeyTrialKey) {
+            timerInProgress = false
+            trialSuccess()
+        }
+        else {
+            timerInProgress = false
+            trialFailure()
+        }
+    }
 };
 
 /*
@@ -323,7 +394,7 @@ const updateFails = (failNum) => {
 
 const wipeScreen = () => {
     for (let x=0; x<=30; x++) {
-        for (let y=0; y<=29; y++) {
+        for (let y=3; y<=29; y++) {
             PS.color(x, y, backgroundGrey)
             PS.glyph(x, y, 0)
         }
@@ -332,8 +403,11 @@ const wipeScreen = () => {
 
 const trialSuccess = () => {
     PS.statusText("Success!")
+    gameSequence = 3
+    for (let x=15; x<=19; x++) {
+        PS.color(x, 1, backgroundGrey)
+    }
     setTimeout(() => {
-        gameSequence = 3
         round++
         updateRound(round)
         generateTrial()
@@ -342,14 +416,84 @@ const trialSuccess = () => {
 
 const trialFailure = () => {
     fails++
+    failFlag = false
     updateFails(fails)
+    gameSequence = 3
+    for (let x=15; x<=19; x++) {
+        PS.color(x, 1, backgroundGrey)
+    }
     PS.statusText("Failure!")
     setTimeout(() => {
-        gameSequence = 3
         round++
         updateRound(round)
         generateTrial()
     }, 3000)
+}
+
+const timerDisplay = () => {
+    let timer = 0
+    timerInProgress = true
+    for (let x=15; x<=19; x++) {
+        PS.color(x, 1, timerGreen)
+    }
+    if (gameSequence === 8) {
+        let timerID = PS.timerStart(1, () => {
+            timer++
+            if (timer >= 300) {
+                timerInProgress = false
+                PS.timerStop(timerID)
+                trialSuccess()
+            }
+            if (failFlag) {
+                timerInProgress = false
+                PS.timerStop(timerID)
+                trialFailure()
+            }
+            if (timer === 60) {
+                PS.color(19, 1, backgroundGrey)
+            }
+            if (timer === 120) {
+                PS.color(18, 1, backgroundGrey)
+            }
+            if (timer === 180) {
+                PS.color(17, 1, backgroundGrey)
+            }
+            if (timer === 240) {
+                PS.color(16, 1, backgroundGrey)
+            }
+            if (timer === 299) {
+                PS.color(15, 1, backgroundGrey)
+            }
+        })
+    }
+    else {
+        let timerID = PS.timerStart(1, () => {
+            timer++
+            if (!timerInProgress) {
+                PS.timerStop(timerID)
+            }
+            if (timer >= 300) {
+                timerInProgress = false
+                PS.timerStop(timerID)
+                trialFailure()
+            }
+            if (timer === 60) {
+                PS.color(19, 1, backgroundGrey)
+            }
+            if (timer === 120) {
+                PS.color(18, 1, backgroundGrey)
+            }
+            if (timer === 180) {
+                PS.color(17, 1, backgroundGrey)
+            }
+            if (timer === 240) {
+                PS.color(16, 1, backgroundGrey)
+            }
+            if (timer === 299) {
+                PS.color(15, 1, backgroundGrey)
+            }
+        })
+    }
 }
 
 const intro = () => {
@@ -478,6 +622,7 @@ const trial_selectColor = () => {
     PS.color(15, 16, colors[2])
     PS.color(22, 16, colors[3])
     PS.color(29, 16, colors[4])
+    timerDisplay()
     gameSequence = 4
 }
 
@@ -491,11 +636,13 @@ const trial_dodgeColor = () => {
     PS.color(2, 29, playerTextColor)
     gameSequence = 5
     let timer = 0
+    timerInProgress = true
     const timerID = PS.timerStart(3, () => {
         timer++
         for (let x=1; x <= 30; x++) {
             if (PS.color(x, 27) === dodgeColorTrialColor) {
                 if (PS.color(x-1, 27) === playerTextColor) {
+                    timerInProgress = false
                     PS.timerStop(timerID)
                     trialFailure()
                 }
@@ -504,6 +651,7 @@ const trial_dodgeColor = () => {
             }
             if (PS.color(x, 29) === dodgeColorTrialColor) {
                 if (PS.color(x-1, 29) === playerTextColor) {
+                    timerInProgress = false
                     PS.timerStop(timerID)
                     trialFailure()
                 }
@@ -523,7 +671,7 @@ const trial_dodgeColor = () => {
                 PS.color(x, 29, backgroundGrey)
             }
         }
-        if (timer % 20 === 0) {
+        if (timer % 15 === 0) {
             const rand = PS.random(4)
             switch (rand) {
                 case 1:
@@ -545,6 +693,7 @@ const trial_dodgeColor = () => {
             }
         }
         if (timer === 200) {
+            timerInProgress = false
             PS.timerStop(timerID)
             trialSuccess()
         }
@@ -562,14 +711,14 @@ const trial_DontSelectColor = () => {
     PS.color(15, 16, colors[2])
     PS.color(22, 16, colors[3])
     PS.color(29, 16, colors[4])
+    timerDisplay()
     gameSequence = 6
 }
 
 const trial_ClickTheCrown = () => {
     const emojis = [0x1F451, 0x1F31F, 0x2B50, 0x1F505, 0x1F7E1] // Crown, Glowing Star, Star, Low brightness, yellow circle
-    for (let i = emojis.length - 1; i > 0; i--) {
+    for (let i = emojis.length - 1; i > 0; i--) { // Shuffle Algorithm
 
-        // Generate random number
         let j = Math.floor(Math.random() * (i + 1));
 
         let temp = emojis[i];
@@ -594,8 +743,48 @@ const trial_ClickTheCrown = () => {
     PS.glyph(15, 16, emojis[2])
     PS.glyph(22, 16, emojis[3])
     PS.glyph(29, 16, emojis[4])
+
+    timerDisplay()
     gameSequence = 7
 }
 
+const trial_DontMoveCursor = () => {
+    PS.statusText("Don't move!")
+    gameSequence = 8
+    setTimeout(() => {
+        timerDisplay()
+    }, 500)
+}
+
+const trial_PressKey = () => {
+    KeyTrialKey = PS.random(26) + 96
+    PS.statusText("Press " + "\'" + String.fromCharCode(KeyTrialKey) + "\'!")
+    gameSequence = 9
+    timerDisplay()
+}
+
+const trial_MoveCursorALot = () => {
+    PS.statusText("Move your cursor a bunch!")
+    gameSequence = 10
+    for (let x=13; x <= 17; x++) {
+        PS.glyphColor(x, 12, PS.COLOR_WHITE)
+        for (let y=12; y <= 19; y++) {
+            PS.color(x, y, PS.COLOR_BLACK)
+        }
+    }
+
+    for (let y=13; y<=18; y++) {
+        PS.color(15, y, backgroundGrey)
+    }
+
+    PS.glyph(13, 12, 'M')
+    PS.glyph(14, 12, 'E')
+    PS.glyph(15, 12, 'T')
+    PS.glyph(16, 12, 'E')
+    PS.glyph(17, 12, 'R')
+
+    timerDisplay()
+}
+
 // Trials
-const trials = [trial_selectColor, trial_dodgeColor, trial_DontSelectColor, trial_ClickTheCrown]
+const trials = [trial_selectColor, trial_dodgeColor, trial_DontSelectColor, trial_ClickTheCrown, trial_DontMoveCursor, trial_PressKey, trial_MoveCursorALot]
